@@ -28,7 +28,7 @@ composer.phar install
 ```
 
 ### Usage
-1. 打开浏览器登录斗鱼后，在 F12->Storage->Cookies 中找到 acf_uid, acf_stk, acf_ltkid 三个字段，记下备用
+1. 打开浏览器登录斗鱼后，在 F12->Storage->Cookies 中找到 acf_username, acf_stk, acf_ltkid 三个字段，记下备用
 2. 配置 .env, 参考附录
 3. 运行```php run.php```
 
@@ -38,7 +38,7 @@ composer.phar install
 -|-
 LOG_LEVEL|日志等级，INFO: 显示弹幕消息，NOTICE: 屏蔽
 DEVICE_ID|机器识别码，最好自己生成一个UUID，去除-后填入
-AUTH_UID|对应 Cookie: acf_uid
+AUTH_USERNAME|对应 Cookie: acf_username
 AUTH_STK|对应 Cookie: acf_stk
 AUTH_LTKID|对应 Cookie: acf_ltkid
 ROOM_ID|房间号

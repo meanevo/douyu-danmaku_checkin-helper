@@ -43,7 +43,7 @@ class Authentication extends AbstractDouyu {
 	 */
 	protected function auth() {
 		$this->send('loginreq', [
-			'username' => getenv('AUTH_UID'),
+			'username' => getenv('AUTH_USERNAME'),
 			'password' => '',
 			'roomid' => getenv('ROOM_ID'),
 			'biz' => 1,

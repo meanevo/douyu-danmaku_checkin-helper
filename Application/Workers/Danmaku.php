@@ -53,6 +53,12 @@ class Danmaku extends AbstractDouyu {
 		$this->handleAddrFallback(function () {
 			$this->connect();
 		});
+		// Schedule a timer to send danmaku periodically
+		$this->scheduleSendDanmaku(
+			getenv('SEND_MESSAGE'),
+			getenv('SEND_INTERVAL'),
+			getenv('SEND_STARTFROM')
+		);
 	}
 
 	/**
@@ -85,7 +91,7 @@ class Danmaku extends AbstractDouyu {
 	 */
 	protected function auth() {
 		$this->send('loginreq', [
-			'username' => getenv('AUTH_UID'),
+			'username' => getenv('AUTH_USERNAME'),
 			'roomid' => getenv('ROOM_ID'),
 		]);
 	}
@@ -118,12 +124,6 @@ class Danmaku extends AbstractDouyu {
 	*/
 	protected function onAuth($message) {
 		$this->join();
-		// Schedule a timer to send danmaku periodically
-		$this->scheduleSendDanmaku(
-			getenv('SEND_MESSAGE'),
-			getenv('SEND_INTERVAL'),
-			getenv('SEND_STARTFROM')
-		);
 	}
 
 	protected function onDanmaku($message) {
