@@ -1,15 +1,14 @@
 <?php
 
 require_once __DIR__ . '/vendor/autoload.php';
+require_once 'env.php';
 
 use Bramus\Monolog\Formatter\ColoredLineFormatter;
-use Dotenv\Dotenv;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
 date_default_timezone_set('Asia/Shanghai');
-(new Dotenv(__DIR__))->load();
 
 new Class extends AbstractMaster {
 
@@ -20,8 +19,13 @@ new Class extends AbstractMaster {
 	 * {@inheritdoc}
 	 */
 	protected function startAll() {
-		$this->startOne(Workers\Authentication::class);
+		if (!filter_var(getenv('RECV_ENABLED'), FILTER_VALIDATE_BOOLEAN)) {
+			exit(1);
+		}
 		$this->startOne(Workers\Danmaku::class);
+		if (filter_var(getenv('SEND_ENABLED'), FILTER_VALIDATE_BOOLEAN)) {
+			$this->startOne(Workers\Authentication::class);
+		}
 	}
 
 	/**

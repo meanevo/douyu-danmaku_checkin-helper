@@ -49,6 +49,11 @@ class Danmaku extends AbstractDouyu {
 	public function onWorkerStart() {
 		// Retrieve room info
 		$this->getRoomInfo(getenv('ROOM_ID'));
+		if (!filter_var(getenv('SEND_ENABLED'), FILTER_VALIDATE_BOOLEAN)) {
+			// RECV danmaku only
+			$this->connect();
+			return;
+		}
 		// Delay auto-connect as fallback due to passive ${addr} setting
 		$this->handleAddrFallback(function () {
 			$this->connect();

@@ -38,7 +38,9 @@ composer.phar install
 -|-
 LOG_LEVEL|日志等级，INFO: 显示弹幕消息，NOTICE: 屏蔽
 DEVICE_ID|机器识别码，最好自己生成一个UUID，去除-后填入
-AUTH_USERNAME|对应 Cookie: acf_username
+RECV_ENABLED|启用弹幕接收
+SEND_ENABLED|启用弹幕发送 (接收必须启用)
+AUTH_USERNAME|对应 Cookie: acf_username, 留空为匿名游客
 AUTH_STK|对应 Cookie: acf_stk
 AUTH_LTKID|对应 Cookie: acf_ltkid
 ROOM_ID|房间号

@@ -7,8 +7,6 @@ abstract class AbstractMaster {
 
 	use LoggerAwareTrait;
 
-	const DEF_PROC_RETRY_WAIT = 3;
-
 	protected $workers;
 
 	public function __construct() {
@@ -105,7 +103,7 @@ abstract class AbstractMaster {
 					break;
 				}
 				// Schedule process restarting
-				$timeout = getenv('RETRY_PROCESS_WAIT') ?: self::DEF_PROC_RETRY_WAIT;
+				$timeout = getenv('RETRY_PROCESS_WAIT');
 				$this->logger->critical('Worker-{name}({pid}) exited by {reason}{retry}', [
 					'name' => $worker->name,
 					'pid' => $pid,

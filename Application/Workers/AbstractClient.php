@@ -7,8 +7,6 @@ use Protocols\ProtocolInterface;
 
 abstract class AbstractClient extends AbstractWorker {
 
-	const DEF_CONN_RETRY_INTERVAL = 30;
-	const DEF_SEND_RETRY_INTERVAL = 30;
 	const CONN_ARGS = [
 		'package_max_length' => 2048000,	// Maximum protocol context length
 		'socket_buffer_size' => 1024 * 1024 * 2,	// 2MB buffer
@@ -116,7 +114,7 @@ abstract class AbstractClient extends AbstractWorker {
 	public function onError(Client $client) {
 		if (in_array($client->errCode, self::RECOVER_ERRNO)) {
 			// Schedule client reconnecting
-			$interval = getenv('RETRY_CONN_INTERVAL') ?: self::DEF_CONN_RETRY_INTERVAL;
+			$interval = getenv('RETRY_CONN_INTERVAL');
 			swoole_timer_after($interval * 1000, [$this, 'connect']);
 			$this->logger->error(socket_strerror($client->errCode) . '{retry}', [
 				'retry' => ", reconnecting in ${interval} seconds",
@@ -135,7 +133,8 @@ abstract class AbstractClient extends AbstractWorker {
 	 */
 	public function onClose(Client $client) {
 		if ($client->errCode === -1) {
-			// Handled close
+			// Handled close, reset errCode
+			$client->errCode = 0;
 			return;
 		}
 		$this->process->exit($client->errCode ?: 90);
@@ -174,7 +173,7 @@ abstract class AbstractClient extends AbstractWorker {
 		}
 		if ($resending && in_array($this->client->errCode, self::RESEND_ERRNO)) {
 			// Schedule buffer resending
-			$interval = getenv('RETRY_SEND_INTERVAL') ?: self::DEF_SEND_RETRY_INTERVAL;
+			$interval = getenv('RETRY_SEND_INTERVAL');
 			// TODO: Out of memory(128M) after approx. 550 scheduled resendings
 			swoole_timer_after($interval * 1000, [$this, 'sendBuffer'], $buffer);
 		}
