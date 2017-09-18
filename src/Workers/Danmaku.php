@@ -127,7 +127,8 @@ class Danmaku extends AbstractDouyu {
 	}
 
 	public function sendDanmaku(string $expression) {
-		$content = $this->parseElPayload($expression);
+		// Scheduled-sending takes 2nd argument as text payload
+		$content = $this->parseElPayload(@func_get_arg(1) ?? $expression);
 		$this->logger->notice('Sending: ' . $content);
 		// Sending danmaku through auth-worker
 		$this->callWorkerFunction(
@@ -206,11 +207,7 @@ class Danmaku extends AbstractDouyu {
 		// Schedule first auto-sending
 		Timer::after($distance * 1000, function () use ($payload, $interval) {
 			$this->sendDanmaku($payload);
-			$this->registerOnlineTicker(
-				$interval * 1000,
-				[$this, 'sendDanmaku'],
-				[$payload]
-			);
+			Timer::tick($interval * 1000, [$this, 'sendDanmaku'], $payload);
 		});
 		$this->logger->notice('Scheduled first sending on {src} (in {dist}s)', [
 			'src' => (new DateTime)->setTimestamp($runAt)->format('Y-m-d H:i:s'),
