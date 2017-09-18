@@ -3,6 +3,9 @@
     "keywords": ["douyu", "danmaku", "swoole"],
     "license": "MIT",
     "type": "project",
+    "repositories": [
+        { "type": "vcs", "url": "https://github.com/meanevo/swoolient", "no-api": true }
+    ],
     "require": {
         "php": ">=7.0.0",
         "ext-swoole": "^2.0",
