@@ -29,10 +29,13 @@ composer.phar install
 
 ### Usage
 1. 打开浏览器登录斗鱼后，在 F12->(Application->)Storage->Cookies(Local Storage) 中找到 acf_username, acf_stk, acf_ltkid 三个字段，记下备用
+2. 建立 .env 配置文件 ```cp .env.example .env```
 2. 配置 .env, 参考附录
-3. 运行```php run.php```
+3. 运行 ```php run.php```, 可选加 env 文件名以加载不同的配置文件，实现多配置（用户）
 
 ### Appendix
+#### 退出
+使用 ```kill SIGTERM 主pid```, 其中主 pid 为 ```{APP_NAME}-MASTER``` 进程对应的 pid
 #### env 配置
 字段|State
 -|-
