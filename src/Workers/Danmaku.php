@@ -66,8 +66,7 @@ class Danmaku extends AbstractDouyu {
 		$this->callWorkerFunction(
 			[Authentication::class, 'getMessageServer'],
 			null,
-			'setDestination',
-			1
+			'setDestination'
 		);
 	}
 
