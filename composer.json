@@ -1,18 +1,18 @@
 {
-    "name": "meanevo/douyu_danmaku_live",
+    "name": "meanevo/douyu_danmaku_io",
     "keywords": ["douyu", "danmaku", "swoole"],
     "license": "MIT",
     "type": "project",
     "require": {
         "php": ">=7.0.0",
         "ext-swoole": "^2.0",
-        "vlucas/phpdotenv": "^2.4",
-        "monolog/monolog": "^1.23",
-        "bramus/monolog-colored-line-formatter": "~2.0"
+        "guzzlehttp/guzzle": "^6.3",
+        "meanevo/swoolient": "dev-master",
+        "vlucas/phpdotenv": "^2.4"
     },
     "autoload": {
         "psr-4": {
-            "": "Application/"
+            "MeanEVO\\Douyu\\DanmakuIO\\": "src/"
         }
     },
     "scripts": {

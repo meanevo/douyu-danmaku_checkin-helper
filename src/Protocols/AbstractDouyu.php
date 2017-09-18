@@ -1,6 +1,8 @@
 <?php
 
-namespace Protocols;
+namespace MeanEVO\Douyu\DanmakuIO\Protocols;
+
+use MeanEVO\Swoolient\Protocols\ProtocolInterface;
 
 abstract class AbstractDouyu implements ProtocolInterface {
 
@@ -9,8 +11,8 @@ abstract class AbstractDouyu implements ProtocolInterface {
 	const PAYLOAD_OFFSET = 4;	// Header (4 + 2 + 2) + Payload
 	const PAYLOAD_EOF = '\0';
 	const T_FLAG = 'v';		// Pack message type to 2 bytes, little endian
-	const T_MESSAGE_SEND = '689';
-	const T_MESSAGE_RECV = '690';
+	const T_MESSAGE_SEND = 0x02b1;
+	const T_MESSAGE_RECV = 0x02b2;
 
 	public $arguments = [
 		// 'open_eof_check' => true,
@@ -39,7 +41,8 @@ abstract class AbstractDouyu implements ProtocolInterface {
 	/**
 	 * {@inheritdoc}
 	 */
-	public function encode($type, $arguments = []) {
+	public function encode($_) {
+		list($type, $arguments) = func_get_args();
 		$query = "type@={$type}/";
 		switch ($type) {
 			case 'keeplive':

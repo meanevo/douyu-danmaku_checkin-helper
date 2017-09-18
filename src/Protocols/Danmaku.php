@@ -1,8 +1,10 @@
 <?php
 
-namespace Protocols;
+namespace MeanEVO\Douyu\DanmakuIO\Protocols;
 
 class Danmaku extends AbstractDouyu {
+
+	const PASSWORD = 1234567890123456;
 
 	/**
 	 * {@inheritdoc}
@@ -18,7 +20,7 @@ class Danmaku extends AbstractDouyu {
 
 	protected function getExtraArgsForLogin() {
 		return [
-			'password' => 1234567890123456,
+			'password' => self::PASSWORD,
 		];
 	}
 

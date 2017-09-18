@@ -1,17 +1,22 @@
 <?php
 
-namespace Workers;
+namespace MeanEVO\Douyu\DanmakuIO\Workers;
 
 use DateTime;
+use GuzzleHttp\Client as HttpClient;
 use Swoole\Client;
-use Swoole\Http\Client as HttpClient;
-use Protocols\Danmaku as DanmakuProtocol;
+use Swoole\Timer;
+use MeanEVO\Douyu\DanmakuIO\Protocols\Danmaku as DanmakuProtocol;
 
 class Danmaku extends AbstractDouyu {
 
-	protected $addr = 'DANMAKU_ADDR';
-	protected $protocol = DanmakuProtocol::class;
-	private $groupId = -9999;
+	const PROTOCOL_CLASS = DanmakuProtocol::class;
+	const ROOMINFO_DSN = 'http://open.douyucdn.cn/api/RoomApi/room';
+
+	/**
+	 * {@inheritdoc}
+	 */
+	protected $scheme = SWOOLE_TCP;
 	private $gifts = [
 		124 => '电竞三丑',
 		191 => '100鱼丸',
@@ -49,20 +54,20 @@ class Danmaku extends AbstractDouyu {
 	public function onWorkerStart() {
 		// Retrieve room info
 		$this->getRoomInfo(getenv('ROOM_ID'));
-		if (!filter_var(getenv('SEND_ENABLED'), FILTER_VALIDATE_BOOLEAN)) {
-			// RECV danmaku only
-			$this->connect();
-			return;
+		if (filter_var(getenv('SEND_ENABLED'), FILTER_VALIDATE_BOOLEAN)) {
+			// Schedule a timer to send danmaku periodically
+			$this->scheduleSendDanmaku(
+				getenv('SEND_MESSAGE'),
+				getenv('SEND_INTERVAL'),
+				getenv('SEND_STARTFROM')
+			);
 		}
-		// Delay auto-connect as fallback due to passive ${addr} setting
-		$this->handleAddrFallback(function () {
-			$this->connect();
-		});
-		// Schedule a timer to send danmaku periodically
-		$this->scheduleSendDanmaku(
-			getenv('SEND_MESSAGE'),
-			getenv('SEND_INTERVAL'),
-			getenv('SEND_STARTFROM')
+		// Retrieve servers list through Authentication worker at once
+		$this->callWorkerFunction(
+			[Authentication::class, 'getMessageServer'],
+			null,
+			'setDestination',
+			1
 		);
 	}
 
@@ -86,40 +91,50 @@ class Danmaku extends AbstractDouyu {
 		}
 	}
 
+	/**
+	 * {@inheritdoc}
+	 */
+	public function connect() {
+		if (filter_var(getenv('RECV_ENABLED'), FILTER_VALIDATE_BOOLEAN)) {
+			return parent::connect();
+		}
+		// Send only, noop default connect behavior
+	}
+
 	/*
 	|--------------------------------------------------------------------------
 	| Request
 	|--------------------------------------------------------------------------
 	*/
+
 	/**
 	 * {@inheritdoc}
 	 */
-	protected function auth() {
+	protected function sendAuth() {
 		$this->send('loginreq', [
 			'username' => getenv('AUTH_USERNAME'),
 			'roomid' => getenv('ROOM_ID'),
 		]);
 	}
 
-	protected function join() {
-		$this->logger->notice('Joining {server} with group {groupId}', [
-			'server' => $this->addr,
-			'groupId' => $this->groupId,
+	protected function sendJoin(int $groupId = -9999) {
+		$this->logger->notice('Joining group {id}', [
+			'id' => $groupId,
 		]);
 		$this->send('joingroup', [
 			'rid' => getenv('ROOM_ID'),
-			'gid' => $this->groupId,
+			'gid' => $groupId,
 		]);
 	}
 
-	public function sendDanmaku(string $text) {
-		// Scheduled-sending takes 2nd argument as text payload
-		$text = $this->parseElPayload(@func_get_arg(1) ?? $text);
-		$this->logger->notice('Sending: ' . $text);
+	public function sendDanmaku(string $expression) {
+		$content = $this->parseElPayload($expression);
+		$this->logger->notice('Sending: ' . $content);
 		// Sending danmaku through auth-worker
-		$this->process->write(Authentication::class, 'send', 'chatmessage', [
-			'content' => $text,
-		]);
+		$this->callWorkerFunction(
+			[Authentication::class, 'send'],
+			['chatmessage', [ 'content' => $content ]]
+		);
 	}
 
 	/*
@@ -127,8 +142,14 @@ class Danmaku extends AbstractDouyu {
 	| Response
 	|--------------------------------------------------------------------------
 	*/
+
 	protected function onAuth($message) {
-		$this->join();
+		// Retrieve group id through Authentication worker at once
+		$this->callWorkerFunction(
+			[Authentication::class, 'getMessageGroupId'],
+			null,
+			'sendJoin'
+		);
 	}
 
 	protected function onDanmaku($message) {
@@ -163,33 +184,11 @@ class Danmaku extends AbstractDouyu {
 	| Helpers
 	|--------------------------------------------------------------------------
 	*/
+
 	public function getRoomInfo(int $roomId) {
-		extract(parse_url(getenv('ROOMINFO_ADDR')));
-		$port = $scheme === 'https' ? 443 : 80;
-		$client = new HttpClient($host, $port, $scheme === 'https');
-		$client->get("${path}/${roomId}", function ($client) {
-			// Room info retrieved
-			$this->onRoomInfo(json_decode($client->body)->data);
-			$client->close();
-		});
-	}
-
-	private function handleAddrFallback(callable $callback) {
-		$timeout = getenv('RETRY_CONN_INTERVAL');
-		swoole_timer_after($timeout * 1000, function () use ($timeout, $callback) {
-			if (!$this->client->isConnected()) {
-				// Fallback to public API
-				$this->logger->warn('{reason}{timeout}, fallback to public API', [
-					'reason' => 'Connect call does not arrive',
-					'timeout' => " in ${timeout}s",
-				]);
-				$callback();
-			}
-		});
-	}
-
-	public function setGroupId(int $groupId) {
-		$this->groupId = $groupId;
+		$client = new HttpClient();
+		$result = $client->request('GET', self::ROOMINFO_DSN . '/' . getenv('ROOM_ID'));
+		$this->onRoomInfo(json_decode($result->getBody())->data);
 	}
 
 	protected function scheduleSendDanmaku(
@@ -206,10 +205,13 @@ class Danmaku extends AbstractDouyu {
 		}
 		$distance = $runAt - time();
 		// Schedule first auto-sending
-		swoole_timer_after($distance * 1000, function () use ($payload, $interval) {
-			$this->sendDanmaku(-1, $payload);
-			// Schedule the second time and after
-			swoole_timer_tick($interval * 1000, [$this, 'sendDanmaku'], $payload);
+		Timer::after($distance * 1000, function () use ($payload, $interval) {
+			$this->sendDanmaku($payload);
+			$this->registerOnlineTicker(
+				$interval * 1000,
+				[$this, 'sendDanmaku'],
+				[$payload]
+			);
 		});
 		$this->logger->notice('Scheduled first sending on {src} (in {dist}s)', [
 			'src' => (new DateTime)->setTimestamp($runAt)->format('Y-m-d H:i:s'),
